@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Stick War Full Stable</title>
+
+<style>
+
+body {
+  font-family: Arial;
+  background: #1e1e1e;
+  color: white;
+  text-align: center;
+}
+
+.box {
+  background: #2c2c2c;
+  margin: 10px auto;
+  padding: 15px;
+  width: 920px;
+  border-radius: 15px;
+}
+
+#gold {
+  font-size: 42px;
+  color: gold;
+  font-weight: bold;
+}
+
+/* BUTTONS */
+.circleButton {
+  width: 100px;
+  height: 120px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin: 10px;
+  position: relative;
+}
+
+.circle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 4px solid #caa400;
+  background: radial-gradient(circle, #ffe066, #caa400);
+  position: relative;
+}
+
+.icon {
+  font-size: 36px;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.price {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* TIMER */
+.cooldown {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  font-weight: bold;
+  background: conic-gradient(rgba(0,0,0,0.75) 0deg, rgba(0,0,0,0.75) 360deg);
+}
+
+/* MINER LIST */
+.miner {
+  background: #444;
+  margin: 5px;
+  padding: 6px;
+  border-radius: 5px;
+}
+
+/* MUSIC AREA (ÜBER MINER, UNTER UNITS) */
+.musicBox {
+  background: #222;
+  margin: 10px auto;
+  padding: 10px;
+  width: 920px;
+  border-radius: 10px;
+}
+
+.toggle {
+  padding: 8px 12px;
+  margin: 5px;
+  background: #555;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Stick War Full Game</h1>
+
+<!-- GOLD -->
+<div class="box">
+Gold: <span id="gold">1000</span>
+</div>
+
+<!-- UNITS -->
+<div class="box">
+
+<button class="circleButton" onclick="buy('miner',150,5)">
+  <div class="circle">
+    <div class="icon">⛏️</div>
+    <div class="price">150</div>
+    <div id="minerUI" class="cooldown" style="display:none;"></div>
+  </div>
+</button>
+
+<button class="circleButton" onclick="buy('sword',125,5)">
+  <div class="circle">
+    <div class="icon">⚔️</div>
+    <div class="price">125</div>
+    <div id="swordUI" class="cooldown" style="display:none;"></div>
+  </div>
+</button>
+
+<button class="circleButton" onclick="buy('archer',300,7)">
+  <div class="circle">
+    <div class="icon">🏹</div>
+    <div class="price">300</div>
+    <div id="archerUI" class="cooldown" style="display:none;"></div>
+  </div>
+</button>
+
+<button class="circleButton" onclick="buy('spear',500,10)">
+  <div class="circle">
+    <div class="icon">🛡️</div>
+    <div class="price">500</div>
+    <div id="spearUI" class="cooldown" style="display:none;"></div>
+  </div>
+</button>
+
+<button class="circleButton" onclick="buy('mage',1200,15)">
+  <div class="circle">
+    <div class="icon">🔮</div>
+    <div class="price">1200</div>
+    <div id="mageUI" class="cooldown" style="display:none;"></div>
+  </div>
+</button>
+
+<button class="circleButton" onclick="buy('giant',1500,20)">
+  <div class="circle">
+    <div class="icon">👹</div>
+    <div class="price">1500</div>
+    <div id="giantUI" class="cooldown" style="display:none;"></div>
+  </div>
+</button>
+
+</div>
+
+<!-- 🎵 MUSIC (ÜBER MINER / UNTER UNITS) -->
+<div class="musicBox">
+<button class="toggle" onclick="toggleMusic()">🎵 Musik</button>
+<button class="toggle" onclick="toggleSound()">🔊 Sound</button>
+</div>
+
+<!-- MINERS -->
+<div class="box">
+<h3>Miner</h3>
+<div id="minerList"></div>
+</div>
+
+<audio id="music" loop src="music.mp3"></audio>
+<audio id="goldSound" src="gold.mp3"></audio>
+
+<script>
+
+let gold = 1000;
+
+let active = {};
+let timer = {};
+let miners = [];
+
+let musicOn = false;
+let soundOn = true;
+
+/* BUY */
+function buy(type,cost,time){
+
+  if(active[type] || gold < cost) return;
+
+  gold -= cost;
+
+  active[type] = true;
+  timer[type] = time;
+}
+
+/* MUSIC */
+function toggleMusic(){
+  let m = document.getElementById("music");
+
+  if(!musicOn){
+    m.play();
+    musicOn = true;
+  } else {
+    m.pause();
+    musicOn = false;
+  }
+}
+
+/* SOUND */
+function toggleSound(){
+  soundOn = !soundOn;
+}
+
+/* LOOP */
+setInterval(()=>{
+
+  for(let t in timer){
+
+    if(active[t]){
+
+      timer[t] -= 0.1;
+
+      let el = document.getElementById(t+"UI");
+      el.style.display = "flex";
+
+      let max =
+        t==="giant"?20:
+        t==="mage"?15:
+        t==="spear"?10:
+        t==="archer"?7:5;
+
+      let deg = (1 - timer[t]/max) * 360;
+
+      el.style.background =
+      `conic-gradient(rgba(0,0,0,0.75) ${deg}deg, rgba(255,215,0,0.2) ${deg}deg 360deg)`;
+
+      if(timer[t] <= 0){
+
+        active[t] = false;
+        el.style.display = "none";
+
+        if(t === "miner"){
+          miners.push({t:20});
+        }
+      }
+    }
+  }
+
+  miners.forEach(m=>{
+    m.t -= 0.1;
+
+    if(m.t <= 0){
+      gold += 100;
+
+      if(soundOn){
+        document.getElementById("goldSound").currentTime = 0;
+        document.getElementById("goldSound").play();
+      }
+
+      m.t = 20;
+    }
+  });
+
+  document.getElementById("gold").innerText = gold;
+
+  updateMinerUI();
+
+},100);
+
+/* MINER UI */
+function updateMinerUI(){
+
+  let list = document.getElementById("minerList");
+  list.innerHTML = "";
+
+  miners.forEach((m,i)=>{
+    list.innerHTML +=
+    `<div class="miner">Miner ${i+1} arbeitet ${Math.ceil(m.t)}s</div>`;
+  });
+
+}
+
+</script>
+
+</body>
+</html>
