@@ -2,17 +2,14 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Stick War Full Stable</title>
-
+<title>Stick War Brettspiel</title>
 <style>
-
 body {
   font-family: Arial;
   background: #1e1e1e;
   color: white;
   text-align: center;
 }
-
 .box {
   background: #2c2c2c;
   margin: 10px auto;
@@ -20,14 +17,18 @@ body {
   width: 920px;
   border-radius: 15px;
 }
-
 #gold {
   font-size: 42px;
   color: gold;
   font-weight: bold;
 }
+#status {
+  font-size: 18px;
+  margin: 10px;
+  color: lightgreen;
+}
 
-/* BUTTONS */
+/* UNITS */
 .circleButton {
   width: 100px;
   height: 120px;
@@ -37,7 +38,6 @@ body {
   margin: 10px;
   position: relative;
 }
-
 .circle {
   width: 90px;
   height: 90px;
@@ -46,7 +46,6 @@ body {
   background: radial-gradient(circle, #ffe066, #caa400);
   position: relative;
 }
-
 .icon {
   font-size: 36px;
   position: absolute;
@@ -54,7 +53,6 @@ body {
   left: 50%;
   transform: translateX(-50%);
 }
-
 .price {
   position: absolute;
   bottom: -28px;
@@ -64,28 +62,31 @@ body {
   font-weight: bold;
 }
 
-/* TIMER */
-.cooldown {
+/* ROUND BUTTON */
+.roundBtn {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: none;
+  background: #444;
+  cursor: pointer;
+  position: relative;
+  color: white;
+  font-weight: bold;
+}
+#roundTimerUI {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 22px;
-  font-weight: bold;
-  background: conic-gradient(rgba(0,0,0,0.75) 0deg, rgba(0,0,0,0.75) 360deg);
+  background: conic-gradient(rgba(255,215,0,0.25) 0deg, rgba(0,0,0,0.7) 0deg);
+}
+.roundLabel {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #ddd;
 }
 
-/* MINER LIST */
-.miner {
-  background: #444;
-  margin: 5px;
-  padding: 6px;
-  border-radius: 5px;
-}
-
-/* MUSIC AREA (ÜBER MINER, UNTER UNITS) */
+/* MUSIC */
 .musicBox {
   background: #222;
   margin: 10px auto;
@@ -93,7 +94,6 @@ body {
   width: 920px;
   border-radius: 10px;
 }
-
 .toggle {
   padding: 8px 12px;
   margin: 5px;
@@ -104,114 +104,232 @@ body {
   cursor: pointer;
 }
 
+/* LISTS */
+.panelTitle {
+  margin: 0 0 10px 0;
+}
+.miner, .queueItem {
+  background: #444;
+  margin: 5px 0;
+  padding: 6px;
+  border-radius: 5px;
+  text-align: left;
+}
+.smallText {
+  color: #bbb;
+  font-size: 13px;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
 </style>
 </head>
-
 <body>
 
-<h1>Stick War Full Game</h1>
+<h1>Stick War Brettspiel</h1>
 
-<!-- GOLD -->
 <div class="box">
-Gold: <span id="gold">1000</span>
+  Gold: <span id="gold">500</span>
+</div>
+
+<div id="status">Warte auf Runde...</div>
+
+<!-- ROUND -->
+<div class="box">
+  <button class="roundBtn" onclick="roundClick()">
+    <div id="roundTimerUI"></div>
+  </button>
+  <div class="roundLabel">Runde starten / stoppen</div>
 </div>
 
 <!-- UNITS -->
 <div class="box">
+  <div class="row">
+    <button class="circleButton" onclick="buy('miner',150)">
+      <div class="circle">
+        <div class="icon">⛏️</div>
+        <div class="price">150</div>
+      </div>
+    </button>
 
-<button class="circleButton" onclick="buy('miner',150,5)">
-  <div class="circle">
-    <div class="icon">⛏️</div>
-    <div class="price">150</div>
-    <div id="minerUI" class="cooldown" style="display:none;"></div>
+    <button class="circleButton" onclick="buy('sword',125)">
+      <div class="circle">
+        <div class="icon">⚔️</div>
+        <div class="price">125</div>
+      </div>
+    </button>
+
+    <button class="circleButton" onclick="buy('archer',300)">
+      <div class="circle">
+        <div class="icon">🏹</div>
+        <div class="price">300</div>
+      </div>
+    </button>
+
+    <button class="circleButton" onclick="buy('spear',500)">
+      <div class="circle">
+        <div class="icon">🛡️</div>
+        <div class="price">500</div>
+      </div>
+    </button>
+
+    <button class="circleButton" onclick="buy('mage',1200)">
+      <div class="circle">
+        <div class="icon">🔮</div>
+        <div class="price">1200</div>
+      </div>
+    </button>
+
+    <button class="circleButton" onclick="buy('giant',1500)">
+      <div class="circle">
+        <div class="icon">👹</div>
+        <div class="price">1500</div>
+      </div>
+    </button>
   </div>
-</button>
-
-<button class="circleButton" onclick="buy('sword',125,5)">
-  <div class="circle">
-    <div class="icon">⚔️</div>
-    <div class="price">125</div>
-    <div id="swordUI" class="cooldown" style="display:none;"></div>
-  </div>
-</button>
-
-<button class="circleButton" onclick="buy('archer',300,7)">
-  <div class="circle">
-    <div class="icon">🏹</div>
-    <div class="price">300</div>
-    <div id="archerUI" class="cooldown" style="display:none;"></div>
-  </div>
-</button>
-
-<button class="circleButton" onclick="buy('spear',500,10)">
-  <div class="circle">
-    <div class="icon">🛡️</div>
-    <div class="price">500</div>
-    <div id="spearUI" class="cooldown" style="display:none;"></div>
-  </div>
-</button>
-
-<button class="circleButton" onclick="buy('mage',1200,15)">
-  <div class="circle">
-    <div class="icon">🔮</div>
-    <div class="price">1200</div>
-    <div id="mageUI" class="cooldown" style="display:none;"></div>
-  </div>
-</button>
-
-<button class="circleButton" onclick="buy('giant',1500,20)">
-  <div class="circle">
-    <div class="icon">👹</div>
-    <div class="price">1500</div>
-    <div id="giantUI" class="cooldown" style="display:none;"></div>
-  </div>
-</button>
-
 </div>
 
-<!-- 🎵 MUSIC (ÜBER MINER / UNTER UNITS) -->
+<!-- MUSIC -->
 <div class="musicBox">
-<button class="toggle" onclick="toggleMusic()">🎵 Musik</button>
-<button class="toggle" onclick="toggleSound()">🔊 Sound</button>
+  <button class="toggle" onclick="toggleMusic()">🎵 Musik</button>
+  <button class="toggle" onclick="toggleSound()">🔊 Sound</button>
 </div>
 
 <!-- MINERS -->
 <div class="box">
-<h3>Miner</h3>
-<div id="minerList"></div>
+  <h3 class="panelTitle">Miner</h3>
+  <div id="minerList"></div>
 </div>
 
-<audio id="music" loop src="music.mp3"></audio>
-<audio id="goldSound" src="gold.mp3"></audio>
+<!-- QUEUE -->
+<div class="box">
+  <h3 class="panelTitle">Warteschlange</h3>
+  <div id="queueList"></div>
+</div>
+
+<audio id="music" loop src="./music.mp3"></audio>
+<audio id="goldSound" src="./gold.mp3"></audio>
 
 <script>
-
-let gold = 1000;
-
-let active = {};
-let timer = {};
-let miners = [];
+let gold = 500;
+let roundTime = 20;
+let roundActive = false;
 
 let musicOn = false;
 let soundOn = true;
 
-/* BUY */
-function buy(type,cost,time){
+let miners = [];
+let queue = [];
 
-  if(active[type] || gold < cost) return;
+const spawnTimes = {
+  miner: 1,
+  sword: 1,
+  archer: 2,
+  spear: 3,
+  mage: 4,
+  giant: 4
+};
+
+const names = {
+  miner: "Miner",
+  sword: "Sword",
+  archer: "Archer",
+  spear: "Spear",
+  mage: "Mage",
+  giant: "Giant"
+};
+
+function totalMinerCount() {
+  return miners.length + queue.filter(item => item.type === "miner").length;
+}
+
+function spawnItem(type) {
+  if (type === "miner") {
+    if (miners.length < 7) {
+      miners.push({});
+    }
+    return;
+  }
+}
+
+function advanceQueueOneRound() {
+  for (let i = queue.length - 1; i >= 0; i--) {
+    queue[i].remaining -= 1;
+
+    if (queue[i].remaining <= 0) {
+      spawnItem(queue[i].type);
+      queue.splice(i, 1);
+    }
+  }
+}
+
+function giveMinerIncome() {
+  const income = miners.length * 20;
+  if (income > 0) {
+    gold += income;
+    if (soundOn) {
+      const s = document.getElementById("goldSound");
+      s.currentTime = 0;
+      s.play().catch(() => {});
+    }
+  }
+}
+
+function startRound() {
+  if (roundActive) return;
+
+  advanceQueueOneRound();
+  giveMinerIncome();
+
+  roundActive = true;
+  roundTime = 20;
+  document.getElementById("status").innerText = "Runde läuft...";
+  updateUI();
+}
+
+function endRound() {
+  if (!roundActive) return;
+
+  roundActive = false;
+  roundTime = 20;
+  document.getElementById("status").innerText = "Runde beendet";
+  updateUI();
+}
+
+function roundClick() {
+  if (!roundActive) {
+    startRound();
+    return;
+  }
+  endRound();
+}
+
+function buy(type, cost) {
+  if (!roundActive) return;
+  if (gold < cost) return;
+
+  if (type === "miner" && totalMinerCount() >= 7) return;
 
   gold -= cost;
 
-  active[type] = true;
-  timer[type] = time;
+  queue.push({
+    type: type,
+    remaining: spawnTimes[type]
+  });
+
+  document.getElementById("status").innerText = names[type] + " gekauft – Runde endet";
+  endRound();
+  updateUI();
 }
 
-/* MUSIC */
-function toggleMusic(){
-  let m = document.getElementById("music");
+function toggleMusic() {
+  const m = document.getElementById("music");
 
-  if(!musicOn){
-    m.play();
+  if (!musicOn) {
+    m.play().catch(() => {});
     musicOn = true;
   } else {
     m.pause();
@@ -219,81 +337,77 @@ function toggleMusic(){
   }
 }
 
-/* SOUND */
-function toggleSound(){
+function toggleSound() {
   soundOn = !soundOn;
 }
 
-/* LOOP */
-setInterval(()=>{
+function updateRoundUI() {
+  const el = document.getElementById("roundTimerUI");
 
-  for(let t in timer){
+  if (!roundActive) {
+    el.style.background = "conic-gradient(rgba(255,215,0,0.18) 0deg, rgba(0,0,0,0.7) 0deg)";
+    return;
+  }
 
-    if(active[t]){
+  const deg = (1 - roundTime / 20) * 360;
+  el.style.background =
+    `conic-gradient(rgba(255,215,0,0.25) ${deg}deg, rgba(0,0,0,0.7) ${deg}deg 360deg)`;
+}
 
-      timer[t] -= 0.1;
+function updateMinerUI() {
+  const list = document.getElementById("minerList");
+  list.innerHTML = "";
 
-      let el = document.getElementById(t+"UI");
-      el.style.display = "flex";
+  if (miners.length === 0) {
+    list.innerHTML = `<div class="smallText">Noch keine Miner aktiv.</div>`;
+    return;
+  }
 
-      let max =
-        t==="giant"?20:
-        t==="mage"?15:
-        t==="spear"?10:
-        t==="archer"?7:5;
+  miners.forEach((m, i) => {
+    list.innerHTML += `<div class="miner">Miner ${i + 1} arbeitet</div>`;
+  });
+}
 
-      let deg = (1 - timer[t]/max) * 360;
+function updateQueueUI() {
+  const list = document.getElementById("queueList");
+  list.innerHTML = "";
 
-      el.style.background =
-      `conic-gradient(rgba(0,0,0,0.75) ${deg}deg, rgba(255,215,0,0.2) ${deg}deg 360deg)`;
+  if (queue.length === 0) {
+    list.innerHTML = `<div class="smallText">Keine Einheiten in Warteschlange.</div>`;
+    return;
+  }
 
-      if(timer[t] <= 0){
+  queue.forEach((item) => {
+    const text =
+      item.remaining <= 1
+        ? `${names[item.type]} – spawnt nächste Runde`
+        : `${names[item.type]} – spawnt in ${item.remaining} Runden`;
 
-        active[t] = false;
-        el.style.display = "none";
+    list.innerHTML += `<div class="queueItem">${text}</div>`;
+  });
+}
 
-        if(t === "miner"){
-          miners.push({t:20});
-        }
-      }
+function updateUI() {
+  document.getElementById("gold").innerText = gold;
+  updateRoundUI();
+  updateMinerUI();
+  updateQueueUI();
+}
+
+setInterval(() => {
+  if (roundActive) {
+    roundTime -= 0.1;
+
+    if (roundTime <= 0) {
+      endRound();
     }
   }
 
-  miners.forEach(m=>{
-    m.t -= 0.1;
-
-    if(m.t <= 0){
-      gold += 100;
-
-      if(soundOn){
-        document.getElementById("goldSound").currentTime = 0;
-        document.getElementById("goldSound").play();
-      }
-
-      m.t = 20;
-    }
-  });
-
   document.getElementById("gold").innerText = gold;
+  updateRoundUI();
+}, 100);
 
-  updateMinerUI();
-
-},100);
-
-/* MINER UI */
-function updateMinerUI(){
-
-  let list = document.getElementById("minerList");
-  list.innerHTML = "";
-
-  miners.forEach((m,i)=>{
-    list.innerHTML +=
-    `<div class="miner">Miner ${i+1} arbeitet ${Math.ceil(m.t)}s</div>`;
-  });
-
-}
-
+updateUI();
 </script>
-
 </body>
 </html>
