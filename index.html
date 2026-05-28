@@ -27,6 +27,11 @@ body {
   margin: 10px;
   color: lightgreen;
 }
+#roomStatus {
+  font-size: 14px;
+  color: #bbb;
+  margin-top: 6px;
+}
 
 /* UNITS */
 .circleButton {
@@ -125,6 +130,22 @@ body {
   justify-content: center;
   gap: 10px;
 }
+
+/* ROOM */
+.roomBox {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.roomInput {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #666;
+  background: #111;
+  color: white;
+}
 </style>
 </head>
 <body>
@@ -132,17 +153,30 @@ body {
 <h1>Stick War Brettspiel</h1>
 
 <div class="box">
+  <div class="roomBox">
+    <input id="roomIdInput" class="roomInput" placeholder="Raumcode" />
+    <select id="playerIdSelect" class="roomInput">
+      <option value="p1">Spieler 1</option>
+      <option value="p2">Spieler 2</option>
+    </select>
+    <button class="toggle" onclick="createRoom()">Raum erstellen</button>
+    <button class="toggle" onclick="joinRoom()">Beitreten</button>
+  </div>
+  <div id="roomStatus">Noch nicht verbunden</div>
+</div>
+
+<div class="box">
   Gold: <span id="gold">500</span>
 </div>
 
-<div id="status">Warte auf Runde...</div>
+<div id="status">Warte auf Raum...</div>
 
 <!-- ROUND -->
 <div class="box">
   <button class="roundBtn" onclick="roundClick()">
     <div id="roundTimerUI"></div>
   </button>
-  <div class="roundLabel">Runde starten / stoppen</div>
+  <div class="roundLabel">Runde beenden</div>
 </div>
 
 <!-- UNITS -->
@@ -213,7 +247,34 @@ body {
 <audio id="music" loop src="./music.mp3"></audio>
 <audio id="goldSound" src="./gold.mp3"></audio>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  onValue,
+  set,
+  update,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+/* ====== FIREBASE SETUP ======
+   Ersetze diese Werte mit deiner Firebase-Web-App-Konfiguration.
+*/
+const firebaseConfig = {
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  databaseURL: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* ====== GAME STATE (Lokal pro Handy) ====== */
 let gold = 500;
 let roundTime = 20;
 let roundActive = false;
@@ -241,6 +302,14 @@ const names = {
   mage: "Mage",
   giant: "Giant"
 };
+
+/* ====== MULTIPLAYER TURN SYNC ====== */
+let roomId = "";
+let myPlayerId = "p1";
+let roomRef = null;
+let roomState = null;
+let listenerAttached = false;
+let lastProcessedRoundNo = -1;
 
 function totalMinerCount() {
   return miners.length + queue.filter(item => item.type === "miner").length;
@@ -270,6 +339,7 @@ function giveMinerIncome() {
   const income = miners.length * 20;
   if (income > 0) {
     gold += income;
+
     if (soundOn) {
       const s = document.getElementById("goldSound");
       s.currentTime = 0;
@@ -278,37 +348,118 @@ function giveMinerIncome() {
   }
 }
 
-function startRound() {
-  if (roundActive) return;
+function applyTurnStartEffects(roundNo) {
+  if (lastProcessedRoundNo === roundNo) return;
 
   advanceQueueOneRound();
   giveMinerIncome();
-
-  roundActive = true;
-  roundTime = 20;
-  document.getElementById("status").innerText = "Runde läuft...";
-  updateUI();
+  lastProcessedRoundNo = roundNo;
 }
 
-function endRound() {
-  if (!roundActive) return;
-
-  roundActive = false;
-  roundTime = 20;
-  document.getElementById("status").innerText = "Runde beendet";
-  updateUI();
+function updateRoomStatus(text) {
+  document.getElementById("roomStatus").innerText = text;
 }
 
-function roundClick() {
-  if (!roundActive) {
-    startRound();
+function updateStatus(text) {
+  document.getElementById("status").innerText = text;
+}
+
+function attachRoomListener() {
+  if (!roomRef || listenerAttached) return;
+  listenerAttached = true;
+
+  onValue(roomRef, (snap) => {
+    const data = snap.val();
+    if (!data) return;
+
+    roomState = data;
+
+    const myTurn = data.turn === myPlayerId;
+    roundActive = myTurn;
+
+    if (myTurn) {
+      const elapsed = data.startedAt ? (Date.now() - data.startedAt) / 1000 : 0;
+      roundTime = Math.max(0, 20 - elapsed);
+
+      applyTurnStartEffects(data.roundNo || 0);
+      updateStatus("Du bist dran");
+    } else {
+      roundTime = 20;
+      updateStatus("Gegner ist dran");
+    }
+
+    updateUI();
+  });
+}
+
+window.createRoom = async function createRoom() {
+  roomId = document.getElementById("roomIdInput").value.trim();
+  myPlayerId = document.getElementById("playerIdSelect").value;
+
+  if (!roomId) {
+    alert("Bitte einen Raumcode eingeben.");
     return;
   }
-  endRound();
+
+  roomRef = ref(db, "rooms/" + roomId);
+
+  await set(roomRef, {
+    turn: myPlayerId,
+    roundNo: 0,
+    startedAt: serverTimestamp()
+  });
+
+  updateRoomStatus("Raum erstellt: " + roomId + " | Du bist " + myPlayerId);
+  attachRoomListener();
+};
+
+window.joinRoom = function joinRoom() {
+  roomId = document.getElementById("roomIdInput").value.trim();
+  myPlayerId = document.getElementById("playerIdSelect").value;
+
+  if (!roomId) {
+    alert("Bitte einen Raumcode eingeben.");
+    return;
+  }
+
+  roomRef = ref(db, "rooms/" + roomId);
+  updateRoomStatus("Verbunden mit Raum: " + roomId + " | Du bist " + myPlayerId);
+  attachRoomListener();
+};
+
+function endTurnAndBroadcast() {
+  if (!roomRef || !roomState) return;
+  if (roomState.turn !== myPlayerId) return;
+
+  const nextPlayer = myPlayerId === "p1" ? "p2" : "p1";
+
+  update(roomRef, {
+    turn: nextPlayer,
+    roundNo: (roomState.roundNo || 0) + 1,
+    startedAt: serverTimestamp()
+  });
 }
 
-function buy(type, cost) {
-  if (!roundActive) return;
+window.roundClick = function roundClick() {
+  if (!roomRef || !roomState) {
+    updateStatus("Erst Raum erstellen oder beitreten.");
+    return;
+  }
+
+  if (roomState.turn !== myPlayerId) {
+    return;
+  }
+
+  endTurnAndBroadcast();
+};
+
+window.buy = function buy(type, cost) {
+  if (!roomRef || !roomState) {
+    updateStatus("Erst Raum erstellen oder beitreten.");
+    return;
+  }
+
+  if (roomState.turn !== myPlayerId) return;
   if (gold < cost) return;
 
   if (type === "miner" && totalMinerCount() >= 7) return;
@@ -320,12 +471,13 @@ function buy(type, cost) {
     remaining: spawnTimes[type]
   });
 
-  document.getElementById("status").innerText = names[type] + " gekauft – Runde endet";
-  endRound();
+  updateStatus(names[type] + " gekauft – Runde endet");
   updateUI();
-}
 
-function toggleMusic() {
+  endTurnAndBroadcast();
+};
+
+window.toggleMusic = function toggleMusic() {
   const m = document.getElementById("music");
 
   if (!musicOn) {
@@ -335,16 +487,17 @@ function toggleMusic() {
     m.pause();
     musicOn = false;
   }
-}
+};
 
-function toggleSound() {
+window.toggleSound = function toggleSound() {
   soundOn = !soundOn;
-}
+};
 
+/* ====== UI ====== */
 function updateRoundUI() {
   const el = document.getElementById("roundTimerUI");
 
-  if (!roundActive) {
+  if (!roomState || roomState.turn !== myPlayerId) {
     el.style.background = "conic-gradient(rgba(255,215,0,0.18) 0deg, rgba(0,0,0,0.7) 0deg)";
     return;
   }
@@ -395,11 +548,11 @@ function updateUI() {
 }
 
 setInterval(() => {
-  if (roundActive) {
+  if (roomState && roomState.turn === myPlayerId) {
     roundTime -= 0.1;
 
     if (roundTime <= 0) {
-      endRound();
+      endTurnAndBroadcast();
     }
   }
 
